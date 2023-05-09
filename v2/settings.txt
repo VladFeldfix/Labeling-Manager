@@ -1,2 +1,2 @@
-Database location --> database.db
-
+Database location --> C:/Users/mig_rprod/Desktop/New Tools/database.db
+TMS Location --> tms
