@@ -230,15 +230,19 @@ class main:
                         # make a label
                         if not error:
                             report_labels = []
-                            label_filename = self.labels_location+"/"+product_part_number+"/TMS "+product_part_number+" "+label_part_number+" "+label_size+" "+label_name+".btw" # for example: "Y:\Rafael\Cables\Cable Marking\TMS\R-BA93261A\TMS R-BA93261A R-606100612 1-2 T1.btw"
-                            template_filename = self.lbaels_templates_location+"/TMS TEMPLATE "+label_part_number+" "+label_size+".btw"
+                            if label_name != "MAIN LABEL":
+                                label_filename = self.labels_location+"/"+product_part_number+"/TMS "+product_part_number+" "+label_part_number+" "+label_size+" "+label_name+".btw" # for example: "Y:\Rafael\Cables\Cable Marking\TMS\R-BA93261A\TMS R-BA93261A R-606100612 1-2 T1.btw"
+                                template_filename = self.lbaels_templates_location+"/TMS TEMPLATE "+label_part_number+" "+label_size+".btw"
+                            else:
+                                
                             if not os.path.isfile(label_filename):
                                 shutil.copy(template_filename, label_filename)
                                 self.pa.print("Created file: "+label_filename)
                                 report_labels.append(label_filename)
-                            else:
                                 os.popen(label_filename)
+                            else:
                                 report_labels.append("TMS "+product_part_number+" "+label_part_number+" "+label_size+" "+label_name+".btw")
+                                os.popen(label_filename)
         
                     # generate html report
                     if not error:
@@ -266,19 +270,21 @@ class main:
                             self.pa.error("Unexpected error")
                         if not error:
                             file.write("<html>\n")
-                            file.write("<html>")
-                            file.write("GENERAL INFORMATION:")
-                            file.write("PART NUMBER: "+part_number+"\n")
-                            file.write("DESCRIPTION: "+desc+"\n")
-                            file.write("ORDER PART NUMBER: "+oreder_number+"\n")
+                            file.write("<head>\n")
+                            file.write("<style>html{font-family:'Courier New';}</style>\n")
+                            file.write("</head>\n")
+                            file.write("<b><u>GENERAL INFORMATION:</u></b><br>\n")
+                            file.write("PART NUMBER: "+part_number+"<br>\n")
+                            file.write("DESCRIPTION: "+desc+"<br>\n")
+                            file.write("ORDER PART NUMBER: "+oreder_number+"<br>\n")
                             file.write("DRAWING PART NUMBER: "+drawing)
-                            file.write("   REV.: "+drawing_rev+"\n")
-                            file.write("BOM REV.: "+bom_rev+"\n")
-                            file.write("DATE: "+self.pa.today()+"\n")
-                            file.write("------------------------------------------------------")
-                            file.write("PRINTED LABELS")
+                            file.write("   REV.: "+drawing_rev+"<br>\n")
+                            file.write("BOM REV.: "+bom_rev+"<br>\n")
+                            file.write("DATE: "+self.pa.today()+"<br>\n")
+                            file.write("------------------------------------------------------<br>\n")
+                            file.write("<b><u>PRINTED LABELS</u></b><br>\n")
                             for lbl in report_labels:
-                                file.write(lbl+"\n")
+                                file.write(lbl+"<br>\n")
                         file.close()
                         os.popen(report_filename)
 
