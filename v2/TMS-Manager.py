@@ -234,7 +234,7 @@ class main:
                                 label_filename = self.labels_location+"/"+product_part_number+"/TMS "+product_part_number+" "+label_part_number+" "+label_size+" "+label_name+".btw" # for example: "Y:\Rafael\Cables\Cable Marking\TMS\R-BA93261A\TMS R-BA93261A R-606100612 1-2 T1.btw"
                                 template_filename = self.lbaels_templates_location+"/TMS TEMPLATE "+label_part_number+" "+label_size+".btw"
                             else:
-                                
+                                pass
                             if not os.path.isfile(label_filename):
                                 shutil.copy(template_filename, label_filename)
                                 self.pa.print("Created file: "+label_filename)
