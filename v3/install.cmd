@@ -1,0 +1,1 @@
+pyinstaller -i favicon.ico --noconsole --onefile Chemicals-Manager.py
