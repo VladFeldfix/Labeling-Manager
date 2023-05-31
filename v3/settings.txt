@@ -1,1 +1,2 @@
-TMS location > C:\Users\mig_rprod\Desktop\New Tools Testing\Cable Marking\TMS
+/TMS location > C:\Users\mig_rprod\Desktop\New Tools Testing\Cable Marking\TMS
+TMS location > D:\Users\Vlad\Desktop\New Tools Testing\Cable Marking\TMS
