@@ -31,8 +31,8 @@ class main:
     
     def load_databases(self):
         # load databases
-        self.TEMPLATES = {}
-        self.TEMPLATES_MAIN = {}
+        self.TEMPLATES = {} # {part_number: size}
+        self.TEMPLATES_MAIN = {} # {part_number: (size, formatt, side)}
         self.INFO = {}
 
         # self.TEMPLATES
@@ -40,15 +40,15 @@ class main:
             for file in files:
                 if ".btw" in file:
                     filename = file.replace(".btw", "")
-                    filename = filename.split(",")
+                    filename = filename.split(" ")
                     if len(filename) == 4:
                         # 0 TMS
                         # 1 TEMPLATE
                         # 2 lbl_part_number1
                         # 3 lbl_size
-                        part_number = filename[2]
+                        lbl_part_number = filename[2]
                         size = filename[3]
-                        self.TEMPLATES[part_number] = size
+                        self.TEMPLATES[lbl_part_number] = size
         
         # self.TEMPLATES_MAIN
         for path, dirs, files in os.walk(self.path_templates):
@@ -63,27 +63,30 @@ class main:
                         # 3 lbl_size
                         # 4 format
                         # 5 SIDE-A
-                        part_number = filename[2]
+                        lbl_part_number = filename[2]
                         size = filename[3]
                         formatt = filename[4]
                         side = filename[5]
-                        self.TEMPLATES_MAIN[part_number] = (size, formatt, side)
+                        self.TEMPLATES_MAIN[lbl_part_number] = (size, formatt, side)
 
     def new(self):
+        self.load_databases()
         # get part number
         part_number = self.sc.input("Insert PRODUCT PART NUMBER").upper()
 
+        # make sure part number is not empty
         if not part_number == "":
-            # check if folder for part number exists
+            # if part number dont have a folder, make a folder
             path = self.path_main+"/"+part_number
-            if os.path.isdir(path):
-                self.sc.error("PRODUCT PART NUMBER is not new!")
-            else:
+            if not os.path.isdir(path):
                 if self.sc.question("Make new directory: "+path+" ?"):
-                    # write script
-                    script_file = path+"/script.txt"
                     os.makedirs(path)
-                    self.sc.print("Fill the following script file:")
+            
+            # if part number have a folder
+            if os.path.isdir(path):
+                # write script if there is none
+                script_file = path+"/script.txt"
+                if not os.path.isfile(script_file):
                     file = open(script_file, 'w')
                     file.write("PART_NUMBER( "+part_number+" )\n")
                     file.write("DESCRIPTION( description )\n")
@@ -97,8 +100,11 @@ class main:
                     file.write("MAIN_LBL( format , balloon )")
                     file.close()
                     os.popen(script_file)
-
+                    self.sc.input("Edit the script file and press ENTER to continue")
+                
+                if os.path.isfile(script_file):
                     # run script
+                    functions = {}
                     functions["PART_NUMBER"] = (self.script_add_part_number, 1)
                     functions["DESCRIPTION"] = (self.script_add_description, 1)
                     functions["ORDER_NUMBER"] = (self.script_add_order_number, 1)
@@ -112,6 +118,7 @@ class main:
                     self.sc.run_script(script_file, functions)
         else:
             self.sc.error("Invalid PRODUCT PART NUMBER")
+        
         # restart
         self.sc.restart()
 
@@ -153,23 +160,42 @@ class main:
     def script_add_sn_format(self, arguments):
         self.INFO["sn_format"] = arguments[0]
 
-    def script_add_balloon(self, arguments):
+    def script_add_balloon(self, arguments): # balloon_number , lbl_part_number
         self.INFO["balloon_"+arguments[0]] = arguments[1]
 
-    def script_add_lbl(self, arguments):
+    def script_add_lbl(self, arguments): # name , balloon
+        # lbl_name
+        lbl_name = arguments[0]
+
+        # balloon
+        balloon = arguments[1]
+
+        # product_part_number
         if "part_number" in self.INFO:
-            lbl_part_number = self.INFO["part_number"]
+            product_part_number = self.INFO["part_number"]
         else:
             self.sc.fatal_error("Script missing function: PART_NUMBER()")
+            return
         
-        
-        lbl_size = self.INFO[""]
-        part_number = ""
-        lbl_name = ""
+        # lbl_part_number
+        if "balloon_"+balloon in self.INFO:
+            lbl_part_number = self.INFO["balloon_"+balloon]
+        else:
+            self.sc.fatal_error("No such balloon: "+balloon+" Fix script")
+            return
+
+        # lbl_size
+        if lbl_part_number in self.TEMPLATES:
+            lbl_size = self.TEMPLATES[lbl_part_number]
+        else:
+            self.sc.fatal_error("LABEL PART NUMBER: "+lbl_part_number+" is not in the database. Fix script, or create a new template")
+            return
 
         src = self.path_templates+"/TMS TEMPLATE "+lbl_part_number+" "+lbl_size+".btw"
-        dst = self.path_main+"/"+part_number+"/TMS "+part_number+" "+lbl_part_number+" "+lbl_size+" "+lbl_name+".btw"
-        shutil.copy(src, dst)
+        dst = self.path_main+"/"+product_part_number+"/TMS "+product_part_number+" "+lbl_part_number+" "+lbl_size+" "+lbl_name+".btw"
+        if not os.path.isfile(dst):
+            self.sc.print(dst)
+            shutil.copy(src, dst)
 
     def script_add_main_lbl(self, arguments):
         pass
