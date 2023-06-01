@@ -57,7 +57,7 @@ class main:
             # get info
             self.read_script(path)
             self.FIRST_SERIAL_NUMBER = self.sc.input("Insert FIRST SERIAL NUMBER").upper()
-            if not self.serial_number_format_validation(self.FIRST_SERIAL_NUMBER):
+            if not self.serial_number_format_validation(self.FIRST_SERIAL_NUMBER,12):
                 self.sc.error("Invalid SERIAL NUMBER: "+self.FIRST_SERIAL_NUMBER+"\nExpected format: FLT0000-0000")
                 self.sc.abort()
                 return
@@ -191,22 +191,30 @@ class main:
 
     def generate_serial_numbers(self):
         if self.SERIAL_NUMBER_FORMAT != "":
-            pass
+            sn = self.SERIAL_NUMBER_FORMAT
+            if len(sn) != 12 and len(sn) != 10:
+                self.sc.fatal_error("Script given serial number format is invalid: Expected formats: FLT0000-0000, or F0000-0000")
+            else:
+                if not self.serial_number_format_validation(sn, 12):
+                    self.sc.fatal_error("Script given serial number format is invalid: Expected formats: FLT0000-0000")
+                if not self.serial_number_format_validation(sn, 10):
+                    self.sc.fatal_error("Script given serial number format is invalid: Expected formats: FLT0000-0000")
         else:
             self.sc.fatal_error("Not given serial number format")
     
-    def serial_number_format_validation(self, sn):
-        if len(sn) != 12:
-            return False
-        if sn[0:3] != "FLT":
-            return False
-        if sn[7] != "-":
-            return False
-        try:
-            first_number = int(sn[8:])
-        except:
-            return False
-        return True
+    def serial_number_format_validation(self, sn, formatt):
+        if formatt == 12:
+            if len(sn) != 12:
+                return False
+            if sn[0:3] != "FLT":
+                return False
+            if sn[7] != "-":
+                return False
+            try:
+                first_number = int(sn[8:])
+            except:
+                return False
+            return True
     
     def open_labels(self):
         for path, directories, files in os.walk(self.loc_tms+"/"+self.PRODUCT_PART_NUMBER):
@@ -269,4 +277,7 @@ class main:
     
     def get_SERIAL_NUMBER_FORMAT(self, agruments):
         self.SERIAL_NUMBER_FORMAT = agruments[0]
+        sn = self.SERIAL_NUMBER_FORMAT
+        if not self.serial_number_format_validation(sn, 12) and not self.serial_number_format_validation(sn, 10):
+            self.sc.fatal_error("Script given serial number format is invalid: Expected formats: FLT0000-0000 or F0000-0000")
 main()
