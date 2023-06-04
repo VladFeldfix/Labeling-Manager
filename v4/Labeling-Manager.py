@@ -26,7 +26,7 @@ class main:
         # load databases
         self.load_databases()
 
-        # display main menu NEW LOT, NEW PART NUMBER, NEW YELLOW LABEL, STOCK COUNT, GENERATE HTML REPORT
+        # display main menu
         self.sc.start()
     
     def load_databases(self):
