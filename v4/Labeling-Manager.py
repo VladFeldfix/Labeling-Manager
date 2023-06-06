@@ -13,17 +13,19 @@ class main:
         # set-up main memu
         self.sc.main_menu["MAKE NEW LABELS"] = self.new
         self.sc.main_menu["PRINT LABELS"] = self.print
-        self.sc.main_menu["PRINT DHR LABELS"] = self.dhr
+        self.sc.main_menu["INVENTORY"] = self.inventory
 
         # get settings
         self.path_main = self.sc.get_setting("Labeling folder")
         self.path_templates = self.path_main+"/_Templates_"
         self.path_main_labels_templates = self.path_main+"/_Templates_/Main Labels"
+        self.path_inventory_label = self.path_main+"/TMS BOX.btw"
 
         # test all paths
         self.sc.test_path(self.path_main)
         self.sc.test_path(self.path_templates)
         self.sc.test_path(self.path_main_labels_templates)
+        self.sc.test_path(self.path_inventory_label)
 
         # load databases
         self.load_databases()
@@ -203,10 +205,6 @@ class main:
         else:
             self.sc.error("Invalid PRODUCT PART NUMBER")
 
-        # restart
-        self.sc.restart()
-    
-    def dhr(self):
         # restart
         self.sc.restart()
 
@@ -488,4 +486,61 @@ class main:
 
         html.close()
         os.popen(path)
+    
+    def inventory(self):
+        # load table
+        inventory_database = self.sc.load_database(self.path_main+"/Inventory.csv", ("BOX-ID", "PART-NUMBER"))
+        last_id = 0
+        if len(inventory_database) > 1:
+            self.sc.print("BOX-ID  PART NUMBER")
+        ignore = True
+        for key, value in inventory_database.items():
+            if not ignore:
+                if len(inventory_database) > 1:
+                    self.sc.print(key.zfill(4)+"    "+value[0])
+                try:
+                    key = int(key)
+                    if key > last_id:
+                        last_id = key
+                except:
+                    key = 0
+            else:
+                ignore = False
+
+        # choose what to do
+        action = self.sc.choose("Choose inventory action", ("ADD", "DELETE"))
+        if action == "ADD":
+            boxid = last_id + 1
+            part_number = self.sc.input("Box #"+str(boxid)+" Insert TMS PART NUMBER").upper()
+            if part_number in self.TEMPLATES:
+                size = self.TEMPLATES[part_number]
+            else:
+                self.sc.error("TMS PART NUMBER is not in the databse")
+                self.sc.restart()
+                return
+            inventory_database[boxid] = (part_number, )
+            self.sc.save_database(self.path_main+"/Inventory.csv", inventory_database)
+            file = open(self.path_main+"/TMS_BOX.csv", 'w')
+            file.write("BOX ID,PART NUMBER,SIZE\n")
+            file.write(str(boxid)+","+part_number+","+size)
+            file.close()
+            os.popen(self.path_inventory_label)
+
+        if action == "DELETE":
+            boxid = self.sc.input("Insert BOX-ID to delete") or 0
+            if boxid in inventory_database:
+                inventory_database[boxid] = "DELETE"
+            else:
+                self.sc.error("This BOX-ID is not in the database")
+                self.sc.restart()
+                return
+            temp = {}
+            for boxid, part_number in inventory_database.items():
+                if part_number != "DELETE":
+                    temp[boxid] = part_number
+            
+            self.sc.save_database(self.path_main+"/Inventory.csv", temp)
+
+        # restart
+        self.sc.restart()
 main()

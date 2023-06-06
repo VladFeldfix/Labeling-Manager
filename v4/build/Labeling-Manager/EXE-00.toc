@@ -62,8 +62,8 @@
   ('_socket', 'C:\\Python310\\DLLs\\_socket.pyd', 'EXTENSION'),
   ('_lzma', 'C:\\Python310\\DLLs\\_lzma.pyd', 'EXTENSION'),
   ('_bz2', 'C:\\Python310\\DLLs\\_bz2.pyd', 'EXTENSION'),
-  ('unicodedata', 'C:\\Python310\\DLLs\\unicodedata.pyd', 'EXTENSION'),
   ('_ssl', 'C:\\Python310\\DLLs\\_ssl.pyd', 'EXTENSION'),
+  ('unicodedata', 'C:\\Python310\\DLLs\\unicodedata.pyd', 'EXTENSION'),
   ('libcrypto-1_1.dll', 'C:\\Python310\\DLLs\\libcrypto-1_1.dll', 'BINARY'),
   ('libssl-1_1.dll', 'C:\\Python310\\DLLs\\libssl-1_1.dll', 'BINARY'),
   ('base_library.zip',
@@ -73,7 +73,7 @@
  [],
  False,
  False,
- 1685970080,
+ 1686041949,
  [('run.exe',
    'C:\\Python310\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit\\run.exe',
    'EXECUTABLE')])
