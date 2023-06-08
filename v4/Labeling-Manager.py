@@ -66,6 +66,7 @@ class main:
                         self.sc.fatal_error("Work order "+file+" is not unique!")
 
     def new(self):
+        # load database
         self.load_databases()
 
         # get part number
@@ -132,81 +133,91 @@ class main:
                 self.sc.fatal_error("Script file is missing a function: "+key+"()")
 
     def print(self):
+        # load database
         self.load_databases()
+
+        # get work order
+        work_order = self.sc.input("Insert WORK ORDER")
+        if work_order == "":
+            self.sc.error("Invalid WORK ORDER")
+            self.sc.restart()
+            return
+        self.INFO["WORK_ORDER"] = work_order
+        if work_order in self.WORK_ORDERS:
+            self.sc.error("WORK ORDER: "+work_order+" is not new")
+            self.sc.restart()
+            return
+
         # get part number
         part_number = self.sc.input("Insert PRODUCT PART NUMBER").upper()
-        goto = self.path_main+"/"+part_number
-        if not part_number == "":
-            if os.path.isdir(goto):
-                script_file = goto+"/script.txt"
-                if os.path.isfile(script_file):
-                    self.run_script(script_file)
-                    self.test_script()
-
-                    # get wo
-                    work_order = self.sc.input("Insert WORK ORDER")
-                    self.INFO["WORK_ORDER"] = work_order
-                    if not work_order in self.WORK_ORDERS:
-        
-                        # get qty
-                        qty = self.sc.input("Insert WORK ORDER SIZE") or 1
-                        self.INFO["QTY"] = qty
-                        try:
-                            qty = int(qty)
-                        except:
-                            self.sc.error("Invalid size")
-                            self.sc.restart()
-                            return
-
-                        # get first sn
-                        first_sn = self.sc.input("Insert FIRST SERIAL NUMBER according to format: "+self.INFO["SERIAL_NUMBER_FORMAT"]).upper()
-                        self.INFO["FIRST_SN"] = first_sn
-                        if len(self.INFO["SERIAL_NUMBER_FORMAT"]) != len(first_sn):
-                            self.sc.error("Invalid serial number format")
-                            self.sc.restart()
-                            return
-                        running_number = first_sn[-4:]
-                        try:
-                            running_number = int(running_number)
-                        except:
-                            self.sc.error("Invalid serial number format")
-                            self.sc.restart()
-                            return
-                        
-                        # pr
-                        pr = self.sc.input("Insert P.R. NUMBER or leave empty for 00").upper() or "00"
-                        self.INFO["PR"] = pr
-                        
-                        # generate serial numbers
-                        snfile = open(goto+"/SerialNumbers.csv", 'w')
-                        snfile.write("SN\n")
-                        for x in range(qty):
-                            sn = first_sn[0:-4]
-                            sn = sn+str(running_number+x).zfill(4)
-                            snfile.write(sn+"\n")
-                        snfile.close()
-
-                        # open all files and generate html report
-                        for path, dirs, files in os.walk(goto):
-                            for file in files:
-                                if ".btw" in file:
-                                    cmd = goto+"/"+file
-                                    if os.path.isfile(cmd):
-                                        os.popen(cmd)
-                        
-                        # generate html report
-                        self.generate_html_report(goto+"/TMS APPROVAL FORM")
-                    else:
-                        self.sc.error("WORK ORDER: "+work_order+" is not new")
-                else:
-                    self.sc.error("No script file: "+goto+"/script.txt")
-            else:
-                self.sc.error("No such folder: "+goto)
-        else:
+        if part_number == "":
             self.sc.error("Invalid PRODUCT PART NUMBER")
+            self.sc.restart()
+            return
+        goto = self.path_main+"/"+part_number
+        if not os.path.isdir(goto):
+            self.sc.error("No such folder: "+goto)
+            self.sc.restart()
+            return
+        
+        # read script
+        script_file = goto+"/script.txt"
+        if os.path.isfile(script_file):
+            self.run_script(script_file)
+            self.test_script()
+        else:
+            self.sc.error("No script file: "+goto+"/script.txt")
+            self.sc.restart()
+            return
 
-        # restart
-        self.sc.restart()
+        # get qty
+        qty = self.sc.input("Insert WORK ORDER SIZE")
+        self.INFO["QTY"] = qty
+        try:
+            qty = int(qty)
+        except:
+            self.sc.error("Invalid size")
+            self.sc.restart()
+            return
+
+        # get first serial number
+        first_sn = self.sc.input("Insert FIRST SERIAL NUMBER according to format: "+self.INFO["SERIAL_NUMBER_FORMAT"]).upper()
+        self.INFO["FIRST_SN"] = first_sn
+        if len(self.INFO["SERIAL_NUMBER_FORMAT"]) != len(first_sn):
+            self.sc.error("Invalid serial number format")
+            self.sc.restart()
+            return
+        running_number = first_sn[-4:]
+        try:
+            running_number = int(running_number)
+        except:
+            self.sc.error("Invalid serial number format")
+            self.sc.restart()
+            return
+
+        # get p.r.
+        pr = self.sc.input("Insert P.R. NUMBER or leave empty for 00").upper() or "00"
+        self.INFO["PR"] = pr
+
+        # generate serial numbers
+        snfile = open(goto+"/SerialNumbers.csv", 'w')
+        snfile.write("SN\n")
+        for x in range(qty):
+            sn = first_sn[0:-4]
+            sn = sn+str(running_number+x).zfill(4)
+            snfile.write(sn+"\n")
+        snfile.close()
+
+        # generate html report
+        self.generate_html_report(goto+"/TMS APPROVAL FORM")
+
+        # open all files
+        for path, dirs, files in os.walk(goto):
+            for file in files:
+                if ".btw" in file:
+                    cmd = goto+"/"+file
+                    if os.path.isfile(cmd):
+                        os.popen(cmd)
 
     # SCRIPT FUNCTIONS
     def script_add_part_number(self, arguments):
@@ -508,7 +519,7 @@ class main:
                 ignore = False
 
         # choose what to do
-        action = self.sc.choose("Choose inventory action", ("ADD", "DELETE"))
+        action = self.sc.choose("Choose inventory action", ("ADD", "DELETE", "CANCEL"))
         if action == "ADD":
             boxid = last_id + 1
             part_number = self.sc.input("Box #"+str(boxid)+" Insert TMS PART NUMBER").upper()
@@ -540,6 +551,11 @@ class main:
                     temp[boxid] = part_number
             
             self.sc.save_database(self.path_main+"/Inventory.csv", temp)
+        
+        if action == "CANCEL":
+            # restart
+            self.sc.restart()
+            return
 
         # restart
         self.sc.restart()
