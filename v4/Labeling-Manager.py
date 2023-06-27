@@ -11,9 +11,9 @@ class main:
         self.sc = SmartConsole("Labeling Manager", "4.0")
 
         # set-up main memu
-        self.sc.main_menu["MAKE NEW LABELS"] = self.new
-        self.sc.main_menu["PRINT LABELS"] = self.print
-        self.sc.main_menu["INVENTORY"] = self.inventory
+        self.sc.add_main_menu_item("MAKE NEW LABELS", self.new)
+        self.sc.add_main_menu_item("PRINT LABELS", self.print)
+        self.sc.add_main_menu_item("INVENTORY", self.inventory)
 
         # get settings
         self.path_main = self.sc.get_setting("Labeling folder")
@@ -113,16 +113,16 @@ class main:
         if os.path.isfile(script_file):
             # run script
             functions = {}
-            functions["PART_NUMBER"] = (self.script_add_part_number, 1)
-            functions["DESCRIPTION"] = (self.script_add_description, 1)
-            functions["ORDER_NUMBER"] = (self.script_add_order_number, 1)
-            functions["DRAWING"] = (self.script_add_drawing, 1)
-            functions["REV"] = (self.script_add_drawing_rev, 1)
-            functions["BOM"] = (self.script_add_bom_rev, 1)
-            functions["SERIAL_NUMBER_FORMAT"] = (self.script_add_sn_format, 1)
-            functions["BALLOON"] = (self.script_add_balloon, 2)
-            functions["LBL"] = (self.script_add_lbl, 2)
-            functions["MAIN_LBL"] = (self.script_add_main_lbl, 2)
+            functions["PART_NUMBER"] = (self.script_add_part_number, ("part_number",))
+            functions["DESCRIPTION"] = (self.script_add_description, ("desc",))
+            functions["ORDER_NUMBER"] = (self.script_add_order_number, ("order_number",))
+            functions["DRAWING"] = (self.script_add_drawing, ("dwg",))
+            functions["REV"] = (self.script_add_drawing_rev, ("rev",))
+            functions["BOM"] = (self.script_add_bom_rev, ("bom",))
+            functions["SERIAL_NUMBER_FORMAT"] = (self.script_add_sn_format, ("sn",))
+            functions["BALLOON"] = (self.script_add_balloon, ("balloon_number" , "lbl_part_number"))
+            functions["LBL"] = (self.script_add_lbl, ("name" , "balloon"))
+            functions["MAIN_LBL"] = (self.script_add_main_lbl, ("format" , "balloon"))
             self.sc.run_script(script_file, functions)
             self.test_script()
 
