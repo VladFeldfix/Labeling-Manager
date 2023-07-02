@@ -367,7 +367,7 @@ class main:
         html.write('            .grey{')
         html.write('                font-family: "David CLM";')
         html.write('                font-size: 11pt;')
-        html.write('                color:rgb(128,128,128);')
+        html.write('                color:black;')
         html.write('            }')
         html.write('            .content, .content tr, .content th, .content td{')
         html.write('                border-collapse: collapse;')
