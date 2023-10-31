@@ -52,7 +52,7 @@ class main:
                         # 1 TEMPLATE
                         # 2 lbl_part_number1
                         # 3 lbl_size
-                        lbl_part_number = filename[2]
+                        lbl_part_number = filename[2].upper()
                         size = filename[3]
                         self.TEMPLATES[lbl_part_number] = size
 

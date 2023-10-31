@@ -44,8 +44,8 @@
   ('Labeling-Manager',
    'C:\\Users\\mig_rprod\\Desktop\\Tools\\Labeling-Manager\\v4\\Labeling-Manager.py',
    'PYSOURCE'),
-  ('VCRUNTIME140.dll', 'C:\\Python310\\VCRUNTIME140.dll', 'BINARY'),
   ('python310.dll', 'C:\\Python310\\python310.dll', 'BINARY'),
+  ('VCRUNTIME140.dll', 'C:\\Python310\\VCRUNTIME140.dll', 'BINARY'),
   ('select', 'C:\\Python310\\DLLs\\select.pyd', 'EXTENSION'),
   ('_decimal', 'C:\\Python310\\DLLs\\_decimal.pyd', 'EXTENSION'),
   ('_hashlib', 'C:\\Python310\\DLLs\\_hashlib.pyd', 'EXTENSION'),
@@ -62,7 +62,7 @@
  [],
  False,
  False,
- 1688285483,
+ 1692522401,
  [('run.exe',
    'C:\\Python310\\lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit\\run.exe',
    'EXECUTABLE')])
