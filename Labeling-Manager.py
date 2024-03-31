@@ -9,7 +9,7 @@ class main:
     # constructor
     def __init__(self):
         # load smart console
-        self.sc = SmartConsole("Labeling Manager", "1.0")
+        self.sc = SmartConsole("Labeling Manager", "1.1")
 
         # set-up main memu
         self.sc.add_main_menu_item("MAKE NEW LABELS", self.new)
@@ -429,7 +429,7 @@ class main:
         html.write('                <td>הודפס ע"י</td>')
         html.write('                <td width="150">:_______________</td>')
         html.write('                <td>בתאריך</td>')
-        html.write('                <td>:_______________</td>')
+        html.write('                <td>:'+self.sc.today()+'</td>')
         html.write('            </tr>')
         html.write('            <tr>')
         html.write('                <td>נבדק ע"י</td>')
