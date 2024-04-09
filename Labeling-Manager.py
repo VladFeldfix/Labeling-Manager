@@ -9,7 +9,7 @@ class main:
     # constructor
     def __init__(self):
         # load smart console
-        self.sc = SmartConsole("Labeling Manager", "1.1")
+        self.sc = SmartConsole("Labeling Manager", "1.2")
 
         # set-up main memu
         self.sc.add_main_menu_item("MAKE NEW LABELS", self.new)
@@ -219,6 +219,7 @@ class main:
                     cmd = goto+"/"+file
                     if os.path.isfile(cmd):
                         os.popen(cmd)
+        self.sc.open_folder(self.path_main+"/"+part_number)
 
     # SCRIPT FUNCTIONS
     def script_add_part_number(self, arguments):
