@@ -1,15 +1,12 @@
 # Download SmartConsole.py from: https://github.com/VladFeldfix/Smart-Console/blob/main/SmartConsole.py
 from SmartConsole import *
-import os
 import shutil
-
-
 
 class main:
     # constructor
     def __init__(self):
         # load smart console
-        self.sc = SmartConsole("Labeling Manager", "1.2")
+        self.sc = SmartConsole("Labeling Manager", "2.0")
 
         # set-up main memu
         self.sc.add_main_menu_item("MAKE NEW LABELS", self.new)
@@ -17,75 +14,50 @@ class main:
         self.sc.add_main_menu_item("INVENTORY", self.inventory)
 
         # get settings
+        self.info = {}
+        self.templates = {}
+        self.templates_main = {}
         self.path_main = self.sc.get_setting("Labeling folder")
-        self.path_templates = self.path_main+"/_Templates_"
-        self.path_main_labels_templates = self.path_main+"/_Templates_/Main Labels"
-        self.path_inventory_label = self.path_main+"/TMS BOX.btw"
+        self.path_templates = self.path_main+"/.Templates"
+        self.path_main_lbl_templates = self.path_main+"/.Templates/Main Labels"
+        self.path_db_pn = self.path_main+"/.Database/INV Part Numbers.csv"
+        self.path_db_inv = self.path_main+"/.Database/Inventory.csv"
+        self.path_db_wo = self.path_main+"/.Database/Printed Work Orders.csv"
+        self.inv_lbl = self.path_main+"/.Database/LBL DATABASE AR00179 INV.btw"
+        self.inv_csv = self.path_main+"/.Database/Inventory LBL.csv"
 
         # test all paths
+        self.sc.test_path(self.inv_lbl)
+        self.sc.test_path(self.inv_csv)
         self.sc.test_path(self.path_main)
         self.sc.test_path(self.path_templates)
-        self.sc.test_path(self.path_main_labels_templates)
-        self.sc.test_path(self.path_inventory_label)
+        self.sc.test_path(self.path_main_lbl_templates)
+        self.sc.test_path(self.path_db_pn)
+        self.sc.test_path(self.path_db_inv)
+        self.sc.test_path(self.path_db_wo)
 
         # load databases
-        self.load_databases()
+        self.load_database()
 
         # display main menu
         self.sc.start()
     
-    def load_databases(self):
-        self.FILES_THAT_HAVE_BEEN_PRINTED = []
-
-        # load databases
-        self.TEMPLATES = {} # {part_number: size}
-        self.INFO = {}
-        self.WORK_ORDERS = {} # {work_order: 1}
-
-        # self.TEMPLATES
-        for path, dirs, files in os.walk(self.path_templates):
-            for file in files:
-                if ".btw" in file:
-                    filename = file.replace(".btw", "")
-                    filename = filename.split(" ")
-                    if len(filename) == 4:
-                        # 0 TMS
-                        # 1 TEMPLATE
-                        # 2 lbl_part_number1
-                        # 3 lbl_size
-                        lbl_part_number = filename[2].upper()
-                        size = filename[3]
-                        self.TEMPLATES[lbl_part_number] = size
-
-        for path, dirs, files in os.walk(self.path_main):
-            for file in files:
-                if ".html" in file:
-                    if not file in self.WORK_ORDERS:
-                        add = file.replace(".html", "")
-                        self.WORK_ORDERS[add] = 1
-                    else:
-                        self.sc.fatal_error("Work order "+file+" is not unique!")
-
+    ################################################################ MAIN MENU FUNCTIONS ################################################################
     def new(self):
         # load database
-        self.load_databases()
+        self.load_database()
 
         # get part number
-        part_number = self.sc.input("Insert PRODUCT PART NUMBER").upper()
+        part_number = self.sc.input("Insert product part number [Without R-]")
 
-        # make sure part number is not empty
+        # process
         if not part_number == "":
-            # if part number dont have a folder, make a folder
-            path = self.path_main+"/"+part_number
-            if not os.path.isdir(path):
-                if self.sc.question("Make new directory: "+path+" ?"):
-                    os.makedirs(path)
-            
-            # if part number have a folder
-            if os.path.isdir(path):
-                # write script if there is none
-                script_file = path+"/script.txt"
-                if not os.path.isfile(script_file):
+            folder = self.path_main+"/"+part_number.upper()
+            script_file = folder+"/script.txt"
+            if not os.path.isdir(folder):
+                self.sc.warning("There is no folder for this product!")
+                if self.sc.question("Would you like to create a new folder: "+folder):
+                    os.makedirs(folder)
                     file = open(script_file, 'w')
                     file.write("PART_NUMBER( "+part_number+" )\n")
                     file.write("DESCRIPTION( description )\n")
@@ -96,463 +68,221 @@ class main:
                     file.write("SERIAL_NUMBER_FORMAT( FLT0000-0000 )\n\n")
                     file.write("BALLOON( balloon_number , tms_part_number )\n")
                     file.write("LBL( name , balloon )\n")
-                    file.write("MAIN_LBL( format , balloon )")
+                    file.write("MAIN_LBL( balloon )\n")
                     file.close()
+                    self.sc.open_folder(folder)
                     os.popen(script_file)
                     self.sc.input("Edit the script file and press ENTER to continue")
-                
+                else:
+                    self.sc.warning("Mission aborted!")
+            if os.path.isfile(script_file):
                 self.run_script(script_file)
-                
-
+            self.sc.open_folder(folder)
         else:
-            self.sc.error("Invalid PRODUCT PART NUMBER")
-        
+            self.sc.error("Invalid product part number")
+
         # restart
         self.sc.restart()
-    
-    def run_script(self, script_file):
-        if os.path.isfile(script_file):
-            # run script
-            functions = {}
-            functions["PART_NUMBER"] = (self.script_add_part_number, ("part_number",))
-            functions["DESCRIPTION"] = (self.script_add_description, ("desc",))
-            functions["ORDER_NUMBER"] = (self.script_add_order_number, ("order_number",))
-            functions["DRAWING"] = (self.script_add_drawing, ("dwg",))
-            functions["REV"] = (self.script_add_drawing_rev, ("rev",))
-            functions["BOM"] = (self.script_add_bom_rev, ("bom",))
-            functions["SERIAL_NUMBER_FORMAT"] = (self.script_add_sn_format, ("sn",))
-            functions["BALLOON"] = (self.script_add_balloon, ("balloon_number" , "lbl_part_number"))
-            functions["LBL"] = (self.script_add_lbl, ("name" , "balloon"))
-            functions["MAIN_LBL"] = (self.script_add_main_lbl, ("format" , "balloon"))
-            self.sc.run_script(script_file, functions)
-            self.test_script()
-
-    def test_script(self):
-        must_keys = ("PART_NUMBER", "DESCRIPTION", "ORDER_NUMBER", "DRAWING", "REV", "BOM", "SERIAL_NUMBER_FORMAT")
-        for key in must_keys:
-            if not key in self.INFO:
-                self.sc.fatal_error("Script file is missing a function: "+key+"()")
 
     def print(self):
         # load database
-        self.load_databases()
+        self.load_database()
 
         # get work order
-        work_order = self.sc.input("Insert WORK ORDER")
-        if work_order == "":
-            self.sc.error("Invalid WORK ORDER")
+        wo = self.sc.input("Insert work order")
+        if wo == "":
+            self.sc.error("Invalid work order!")
             self.sc.restart()
             return
-        self.INFO["WORK_ORDER"] = work_order
-        if work_order in self.WORK_ORDERS:
-            self.sc.error("WORK ORDER: "+work_order+" is not new")
+        if wo in self.work_orders:
+            self.sc.error("Work order is not new!")
             self.sc.restart()
             return
-
+        
         # get part number
-        part_number = self.sc.input("Insert PRODUCT PART NUMBER").upper()
+        part_number = self.sc.input("Insert product part number [Without R-]")
         if part_number == "":
-            self.sc.error("Invalid PRODUCT PART NUMBER")
+            self.sc.error("Invalid part number!")
             self.sc.restart()
             return
-        goto = self.path_main+"/"+part_number
-        if not os.path.isdir(goto):
-            self.sc.error("No such folder: "+goto)
+        path_to_product = self.path_main+"/"+part_number.upper()
+        script_file = path_to_product+"/script.txt"
+        if not os.path.isdir(path_to_product):
+            self.sc.error("There is no folder for "+part_number+"! go to MAIN MENU > MAKE NEW LABELS")
             self.sc.restart()
             return
         
         # read script
-        script_file = goto+"/script.txt"
-        if os.path.isfile(script_file):
-            self.run_script(script_file)
-            self.test_script()
-        else:
-            self.sc.error("No script file: "+goto+"/script.txt")
+        if not os.path.isfile(script_file):
+            self.sc.error("There is no script file for "+part_number+"!")
             self.sc.restart()
             return
-
-        # get qty
-        qty = self.sc.input("Insert WORK ORDER SIZE")
-        self.INFO["QTY"] = qty
-        try:
-            qty = int(qty)
-        except:
-            self.sc.error("Invalid size")
-            self.sc.restart()
-            return
+        self.run_script(script_file)
 
         # get first serial number
-        first_sn = self.sc.input("Insert FIRST SERIAL NUMBER according to format: "+self.INFO["SERIAL_NUMBER_FORMAT"]).upper()
-        self.INFO["FIRST_SN"] = first_sn
-        if len(self.INFO["SERIAL_NUMBER_FORMAT"]) != len(first_sn):
-            self.sc.error("Invalid serial number format")
+        if not "SERIAL_NUMBER_FORMAT" in self.info:
+            self.sc.error("Script missing function: SERIAL_NUMBER_FORMAT()")
             self.sc.restart()
             return
-        running_number = first_sn[-4:]
+        first_serial_number = self.sc.input("Insert first serial number in format: "+self.info["SERIAL_NUMBER_FORMAT"]).upper()
+        if len(first_serial_number) != len(self.info["SERIAL_NUMBER_FORMAT"]):
+            self.sc.error("Invalid serial number format!")
+            self.sc.restart()
+            return
+        first_serial_number_int = first_serial_number[-4:]
         try:
-            running_number = int(running_number)
+            first_serial_number_int = int(first_serial_number_int)
         except:
-            self.sc.error("Invalid serial number format")
+            self.sc.error("Invalid serial number! last 4 digits must be a number 0000-9999")
             self.sc.restart()
             return
+        
+        # get wo size
+        size = self.sc.input("Insert work order size")
+        try:
+            size = int(size)
+        except:
+            self.sc.error("Invalid work order size!")
+            self.sc.restart()
+            return
+        
+        # make all serial numbers
+        path = path_to_product+"/SerialNumbers.csv"
+        file = open(path, 'w')
+        for i in range(first_serial_number_int, first_serial_number_int+size):
+            suffix = str(i).zfill(4)
+            preffix = first_serial_number[:-4]
+            file.write(preffix+suffix+"\n")
+        file.close()
 
-        # get p.r.
-        pr = self.sc.input("Insert P.R. NUMBER or leave empty for 00").upper() or "00"
-        self.INFO["PR"] = pr
-
-        # generate serial numbers
-        snfile = open(goto+"/SerialNumbers.csv", 'w')
-        snfile.write("SN\n")
-        for x in range(qty):
-            sn = first_sn[0:-4]
-            sn = sn+str(running_number+x).zfill(4)
-            snfile.write(sn+"\n")
-        snfile.close()
-
-        # generate html report
-        self.generate_html_report(goto+"/TMS APPROVAL FORM")
+        # write to the database
+        self.work_orders[wo] = (self.sc.today(), first_serial_number, str(size))
+        self.sc.save_database(self.path_db_wo, self.work_orders)
 
         # open all files
-        for path, dirs, files in os.walk(goto):
+        for path, dirs, files in os.walk(path_to_product):
             for file in files:
                 if ".btw" in file:
-                    cmd = goto+"/"+file
+                    cmd = path_to_product+"/"+file
                     if os.path.isfile(cmd):
                         os.popen(cmd)
-        self.sc.open_folder(self.path_main+"/"+part_number)
-
-    # SCRIPT FUNCTIONS
-    def script_add_part_number(self, arguments):
-        self.INFO["PART_NUMBER"] = arguments[0]
-
-    def script_add_description(self, arguments):
-        self.INFO["DESCRIPTION"] = arguments[0]
+        self.sc.open_folder(path_to_product)
         
-    def script_add_order_number(self, arguments):
-        self.INFO["ORDER_NUMBER"] = arguments[0]
+        # restart
+        self.sc.restart()
 
-    def script_add_drawing(self, arguments):
-        self.INFO["DRAWING"] = arguments[0]
-
-    def script_add_drawing_rev(self, arguments):
-        self.INFO["REV"] = arguments[0]
-
-    def script_add_bom_rev(self, arguments):
-        self.INFO["BOM"] = arguments[0]
-
-    def script_add_sn_format(self, arguments):
-        self.INFO["SERIAL_NUMBER_FORMAT"] = arguments[0]
-
-    def script_add_balloon(self, arguments): # balloon_number , lbl_part_number
-        self.INFO["balloon_"+arguments[0]] = arguments[1]
-
-    def script_add_lbl(self, arguments): # name , balloon
-        # lbl_name
-        lbl_name = arguments[0]
-
-        # balloon
-        balloon = arguments[1]
-
-        # product_part_number
-        if "PART_NUMBER" in self.INFO:
-            product_part_number = self.INFO["PART_NUMBER"]
-        else:
-            self.sc.fatal_error("Script missing function: PART_NUMBER()")
-            return
-        
-        # lbl_part_number
-        if "balloon_"+balloon in self.INFO:
-            lbl_part_number = self.INFO["balloon_"+balloon]
-        else:
-            self.sc.fatal_error("No such balloon: "+balloon+" Fix script")
-            return
-
-        # lbl_size
-        if lbl_part_number in self.TEMPLATES:
-            lbl_size = self.TEMPLATES[lbl_part_number]
-        else:
-            self.sc.fatal_error("LABEL PART NUMBER: "+lbl_part_number+" is not in the database. Fix script, or create a new template")
-            return
-
-        src = self.path_templates+"/TMS TEMPLATE "+lbl_part_number+" "+lbl_size+".btw"
-        self.sc.test_path(src)
-        dst = self.path_main+"/"+product_part_number+"/TMS "+product_part_number+" "+lbl_part_number+" "+lbl_size+" "+lbl_name+".btw"
-        self.FILES_THAT_HAVE_BEEN_PRINTED.append([lbl_part_number,lbl_size,lbl_name])
-        if not os.path.isfile(dst):
-            self.sc.print(dst)
-            shutil.copy(src, dst)
-
-    def script_add_main_lbl(self, arguments):
-        # MAIN_LBL( format , balloon )
-
-        # GATHER DATA
-        # formatt
-        formatt = arguments[0]
-
-        # balloon
-        balloon = arguments[1]
-
-        # lbl_part_number
-        if "balloon_"+balloon in self.INFO:
-            lbl_part_number = self.INFO["balloon_"+balloon]
-        else:
-            self.sc.fatal_error("No such balloon: "+balloon+" Fix script")
-            return
-        
-        # lbl_size
-        if lbl_part_number in self.TEMPLATES:
-            lbl_size = self.TEMPLATES[lbl_part_number]
-        else:
-            self.sc.fatal_error("LABEL PART NUMBER: "+lbl_part_number+" is not in the database. Fix script, or create a new template")
-            return
-
-        # product_part_number
-        if "PART_NUMBER" in self.INFO:
-            product_part_number = self.INFO["PART_NUMBER"]
-        else:
-            self.sc.fatal_error("Script missing function: PART_NUMBER()")
-            return
-        
-        # side
-        lbls = []
-        for abc in ("", "-A", "-B", "-C"):
-            for part_side in ("", " PART", " SIDE"):
-                side = part_side+abc
-                path = self.path_main_labels_templates+"/TMS TEMPLATE "+lbl_part_number+" "+lbl_size+" "+formatt+side+".btw"
-                if os.path.isfile(path):
-                    lbls.append([lbl_part_number, lbl_size, formatt, side, product_part_number])
-
-        # if failed to make any main labels
-        if len(lbls) == 0:
-            self.sc.fatal_error("Failed to create any main label, make sure all given information is accurate")
-
-        # generate all labels
-        for lbl in lbls:
-            lbl_part_number = lbl[0]
-            lbl_size = lbl[1]
-            formatt = lbl[2]
-            side = lbl[3]
-            product_part_number = lbl[4]
-
-            src = self.path_main_labels_templates+"/TMS TEMPLATE "+lbl_part_number+" "+lbl_size+" "+formatt+side+".btw"
-            dst = self.path_main+"/"+product_part_number+"/TMS "+product_part_number+" "+lbl_part_number+" "+lbl_size+" MAIN LABEL"+side+".btw"
-            self.FILES_THAT_HAVE_BEEN_PRINTED.append([lbl_part_number,lbl_size,"MAIN LABEL"+side])
-            if not os.path.isfile(dst):
-                self.sc.print(dst)
-                shutil.copy(src, dst)
-    
-    def generate_html_report(self, location):
-        # save html file
-        path = location+"/"+self.INFO["WORK_ORDER"]+".html"
-        if not os.path.isdir(location):
-            os.makedirs(location)
-        
-        # WRITE
-        html = open(path, 'w')
-        # head
-        html.write('<html>')
-        html.write('    <head>')
-        html.write('        <style>')
-        html.write('            body, header, footer{')
-        html.write('                direction: rtl;')
-        html.write('                font-family: "David CLM";')
-        html.write('                font-size: 11pt;')
-        html.write('            }')
-        html.write('            h1{')
-        html.write('                font-family: "David CLM";')
-        html.write('                font-size: 15pt;')
-        html.write('            }')
-        html.write('            td{')
-        html.write('                font-family: "David CLM";')
-        html.write('                font-size: 11pt;')
-        html.write('            }')
-        html.write('            .grey{')
-        html.write('                font-family: "David CLM";')
-        html.write('                font-size: 11pt;')
-        html.write('                color:black;')
-        html.write('            }')
-        html.write('            .content, .content tr, .content th, .content td{')
-        html.write('                border-collapse: collapse;')
-        html.write('                border-color: black;')
-        html.write('                border-width: 1px;')
-        html.write('                border-style: solid;')
-        html.write('                padding: 4px;')
-        html.write('                direction: rtl;')
-        html.write('                text-align: right;')
-        html.write('            }')
-        html.write('            .content th{')
-        html.write('                color:white;')
-        html.write('                background-color: rgb(102,102,102);')
-        html.write('            }')
-        html.write('        </style>')
-        html.write('    </head>')
-
-        # head
-        html.write('    <header>')
-        html.write('        <h1>טופס אישור הדפסת סימוני חוטים</h1>')
-        html.write('    </header>')
-
-        # body
-        html.write('    <body>')
-
-        # top info table
-        html.write('        <table>')
-        html.write('            <tr>')
-        html.write('                <td>מק"ט הרכבה:</td>')
-        html.write('                <td width="100" class="grey"><u>'+self.INFO["PART_NUMBER"]+'</u></td>')
-        html.write('                <td>תיאור:</td>')
-        html.write('                <td colspan="5" class="grey"><u>'+self.INFO["DESCRIPTION"]+'</u></td>')
-        html.write('            </tr>')
-        html.write('            <tr>')
-        html.write('                <td>מס’ הזמנה:</td>')
-        html.write('                <td class="grey"><u>'+self.INFO["ORDER_NUMBER"]+'</u></td>')
-        html.write('                <td width="60">מס’ פק"ע:</td>')
-        html.write('                <td class="grey"  width="60"><u>'+self.INFO["WORK_ORDER"]+'</u></td>')
-        html.write('                <td>רוויזיה:</td>')
-        html.write('                <td class="grey"><u>'+self.INFO["PR"]+'</u></td>')
-        html.write('                <td>כמות:</td>')
-        html.write('                <td class="grey"><u>'+self.INFO["QTY"]+'</u></td>')
-        html.write('            </tr>')
-        html.write('            <tr>')
-        html.write('                <td>מק"ט שרטוט:</td>')
-        html.write('                <td class="grey"><u>'+self.INFO["DRAWING"]+'</u></td>')
-        html.write('                <td>רוויזיה:</td>')
-        html.write('                <td class="grey"><u>'+self.INFO["REV"]+'</u></td>')
-        html.write('                <td colspan="2">רוויזיה של BOM:</td>')
-        html.write('                <td colspan="2" class="grey"><u>'+self.INFO["BOM"]+'</u></td>')
-        html.write('            </tr>')
-        html.write('        </table>')
-
-        # signitures
-        html.write('        <p>-----------------------------------------------------------------------------------------------------------------</p>')
-        html.write('        <table>')
-        html.write('            <tr>')
-        html.write('                <td>הודפס ע"י</td>')
-        html.write('                <td width="150">:_______________</td>')
-        html.write('                <td>בתאריך</td>')
-        html.write('                <td>:'+self.sc.today()+'</td>')
-        html.write('            </tr>')
-        html.write('            <tr>')
-        html.write('                <td>נבדק ע"י</td>')
-        html.write('                <td width="150">:_______________</td>')
-        html.write('                <td>בתאריך</td>')
-        html.write('                <td>:_______________</td>')
-        html.write('            </tr>')
-        html.write('        </table>')
-
-        # printed files
-        html.write('        <p>-----------------------------------------------------------------------------------------------------------------</p>')
-        html.write('        <p>רשימת סימונים:</p>')
-        html.write('        <table class="content">')
-        html.write('            <tr>')
-        html.write('                <th width="40">#</th>')
-        html.write('                <th width="322">תיאור</th>')
-        html.write('                <th width="200">מק"ט</th>')
-        html.write('                <th width="40">גודל</th>')
-        html.write('            </tr>')
-        i = 0
-        for lbl in self.FILES_THAT_HAVE_BEEN_PRINTED:
-            i += 1
-            if i < 21:
-                # self.FILES_THAT_HAVE_BEEN_PRINTED.append([lbl_part_number,lbl_size,"MAIN LABEL"+side])
-                lbl_part_number = lbl[0]
-                size = lbl[1]
-                name = lbl[2]
-                html.write('        <tr>')
-                html.write('            <td>'+str(i)+'.</td>')
-                html.write('            <td class="grey">'+name+'</td>')
-                html.write('            <td class="grey">'+lbl_part_number+'</td>')
-                html.write('            <td class="grey">'+size+'</td>')
-                html.write('        </tr>')
-        x = i
-        for _ in range(20-x):
-            i += 1
-            html.write('        <tr>')
-            html.write('            <td>'+str(i)+'.</td>')
-            html.write('            <td class="grey"></td>')
-            html.write('            <td class="grey"></td>')
-            html.write('            <td class="grey"></td>')
-            html.write('        </tr>')
-
-        html.write('        </table>')
-        html.write('        <p>-----------------------------------------------------------------------------------------------------------------</p>')
-        # end
-        html.write('        <table class="content">')
-        html.write('            <tr>')
-        html.write('                <td style="padding: 10px;">')
-        html.write('                    <p style="line-height: 0.5;">הערות:</p>')
-        html.write('                    <p style="line-height: 0.5;">_____________________________________________________________________________________________________</p>')
-        html.write('                    <p style="line-height: 0.5;">_____________________________________________________________________________________________________</p>')
-        html.write('                    <p style="line-height: 0.5;">_____________________________________________________________________________________________________</p>')
-        html.write('                </td>')
-        html.write('            </tr>')
-        html.write('        </table>')
-        html.write('    </body>')
-        html.write('    <footer>')
-        html.write('        <br>')
-        html.write('        <text>תחנת בדיקה חשמלית והדפסת סימוני חוטים</text>')
-        html.write('        <br>')
-        html.write('        <text>טופס לא מבוקר&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</text>')
-        html.write('        <text>עמוד 1 מתוך 1</text>')
-        html.write('    </footer>')
-        html.write('</html>')
-
-        html.close()
-        os.popen(path)
-    
     def inventory(self):
-        # load table
-        inventory_database = self.sc.load_database(self.path_main+"/Inventory.csv", ("BOX-ID", "PART-NUMBER"))
-        last_id = 0
-        if len(inventory_database) > 1:
-            self.sc.print("BOX-ID  PART NUMBER")
-        ignore = True
-        for key, value in inventory_database.items():
-            if not ignore:
-                if len(inventory_database) > 1:
-                    self.sc.print(key.zfill(4)+"    "+value[0])
-                try:
-                    key = int(key)
-                    if key > last_id:
-                        last_id = key
-                except:
-                    key = 0
-            else:
-                ignore = False
+        # load database
+        self.load_database()
 
-        # choose what to do
+        # display inventory
+        pn_qty = {}
+        last_id = 0
+        for inv in self.inventory:
+            box_id = inv[0]
+            try:
+                box_id = int(box_id)
+            except:
+                box_id = 0
+            pn = inv[1]
+            if last_id < box_id:
+                last_id = box_id
+            last_id += 1
+            if not pn in pn_qty:
+                pn_qty[pn] = 1
+            else:
+                pn_qty[pn] += 1
+        longest_pn = ""
+        for pns in self.part_numbers:
+            pn = pns[0]
+            if len(pn) > len(longest_pn):
+                longest_pn = pn
+        longest_description = ""
+        for descs in self.part_numbers:
+            desc = descs[2]
+            if len(desc) > len(longest_description):
+                longest_description = desc
+        pn_spaces = (len(longest_pn)+2)-len("PART NUMBER")
+        pn_spaces = " "*pn_spaces
+        ds_spaces = (len(longest_description)+2)-len("DESCRIPTION")
+        ds_spaces = " "*ds_spaces
+        self.sc.print("PART NUMBER"+pn_spaces+"DESCRIPTION"+ds_spaces+"QTY.",'red')
+        part_numbers = []
+        descriptions = {}
+        for pns in self.part_numbers[1:]:
+            pn = pns[0]
+            description = pns[2]
+            part_numbers.append(pn)
+            descriptions[pn] = description
+            pn_spaces = (len(longest_pn)+2)-len(pn)
+            pn_spaces = " "*pn_spaces
+            ds_spaces = (len(longest_description)+2)-len(description)
+            ds_spaces = " "*ds_spaces
+            if pn in pn_qty:
+                qty = str(pn_qty[pn])
+            else:
+                qty = "0"
+            self.sc.print(pn+pn_spaces+description+ds_spaces+qty)
+        
+        # choose an action
         action = self.sc.choose("Choose inventory action", ("ADD", "DELETE", "CANCEL"))
         if action == "ADD":
-            boxid = last_id + 1
-            part_number = self.sc.input("Box #"+str(boxid)+" Insert TMS PART NUMBER").upper()
-            if part_number in self.TEMPLATES:
-                size = self.TEMPLATES[part_number]
-            else:
-                self.sc.error("TMS PART NUMBER is not in the databse")
+            # get part number
+            item = self.sc.input("Insert item part number")
+            if item == "":
+                self.sc.error("Invalid part number")
                 self.sc.restart()
                 return
-            inventory_database[boxid] = (part_number, )
-            self.sc.save_database(self.path_main+"/Inventory.csv", inventory_database)
-            file = open(self.path_main+"/TMS_BOX.csv", 'w')
-            file.write("BOX ID,PART NUMBER,SIZE\n")
-            file.write(str(boxid)+","+part_number+","+size)
+
+            if not item in part_numbers:
+                self.sc.error("Part number is not in the database!\nUpdate file "+self.path_db_pn)
+                self.sc.restart()
+                return
+            
+            # add part number to the inventory
+            self.inventory.append((last_id,item))
+            description = descriptions[item]
+            self.sc.good("Part number was successfully added to the database!")
+            self.sc.save_csv(self.path_db_inv, self.inventory)
+            file = open(self.inv_csv, 'w')
+            file.write("BoxID,PartNumber,Description\n")
+            file.write(str(last_id)+","+item+","+description+"\n")
             file.close()
-            os.popen(self.path_inventory_label)
+            os.popen(self.inv_lbl)
 
         if action == "DELETE":
-            boxid = self.sc.input("Insert BOX-ID to delete") or 0
-            if boxid in inventory_database:
-                inventory_database[boxid] = "DELETE"
-            else:
-                self.sc.error("This BOX-ID is not in the database")
+            n = self.sc.input("Insert Box-ID to delete")
+            if n == "":
+                # restart
+                self.sc.error("Invalid Box-ID")
                 self.sc.restart()
                 return
-            temp = {}
-            for boxid, part_number in inventory_database.items():
-                if part_number != "DELETE":
-                    temp[boxid] = part_number
+            try:
+                n = int(n)
+            except:
+                # restart
+                self.sc.error("Invalid Box-ID")
+                self.sc.restart()
+                return
+            n = str(n)
+            was_deleted = False
+            new_inv = [["Box-ID","Part Number"]]
+            for inv in self.inventory[1:]:
+                box_id = inv[0]
+                part_number = inv[1]
+                if box_id != n:
+                    new_inv.append((box_id,part_number))
+                else:
+                    was_deleted = True
             
-            self.sc.save_database(self.path_main+"/Inventory.csv", temp)
+            if was_deleted:
+                self.sc.good("Box-ID "+n+" was successfully deleted!")
+                self.sc.save_csv(self.path_db_inv, new_inv)
+            else:
+                # restart
+                self.sc.error("Box-ID dosen't exist!")
+                self.sc.restart()
+                return
         
         if action == "CANCEL":
             # restart
@@ -561,4 +291,175 @@ class main:
 
         # restart
         self.sc.restart()
+
+    ################################################################ DATABASE FUNCTIONS ################################################################
+    def load_database(self):
+        # load database
+        self.part_numbers = self.sc.load_csv(self.path_db_pn)
+        self.inventory = self.sc.load_csv(self.path_db_inv)
+        self.work_orders = self.sc.load_database(self.path_db_wo, ["Work Order", "Date Printed", "First SN", "Size"])
+
+        # load templates
+        self.templates = {} # {lbl_part_number: [template file location, (LBL, TMS, or SPL), (1-2, 3-8, ... 1_1-2)]}
+        for path, dirs, files in os.walk(self.path_templates):
+            for file in files:
+                if ".btw" in file:
+                    filename = file.replace(".btw", "")
+                    filename = filename.split(" ")
+                    if len(filename) == 4:
+                        # 0 TMS
+                        # 1 TEMPLATE
+                        # 2 lbl_part_number
+                        # 3 lbl_size
+                        lbl_type = filename[0]
+                        lbl_part_number = filename[2]
+                        size = filename[3]
+                        self.templates[lbl_part_number] = (path+"/"+file, lbl_type, size)
+        
+        # load templates for main lbl
+        for path, dirs, files in os.walk(self.path_main_lbl_templates):
+            for file in files:
+                if ".btw" in file:
+                    filename = file.replace(".btw", "")
+                    filename = filename.split(" ")
+                    if len(filename) == 6 or len(filename) == 7:
+                        # 0 TMS 
+                        # 1 TEMPLATE 
+                        # 2 R-606101044
+                        # 3 3-4
+                        # 4 MAIN
+                        # 5 LABEL
+                        # 6 SIDE-A
+
+                        # lbltype = self.templates_main[lbl_part_number][0]
+                        # lbl_size = self.templates_main[lbl_part_number][1]
+                        # sides = self.templates_main[lbl_part_number][2]
+                        
+                        lbltype = filename[0]
+                        lbl_pn = filename[2]
+                        lbl_size = filename[3]
+                        if len(filename) == 6:
+                            self.templates_main[lbl_pn] = [lbltype, lbl_size, ["",]]
+
+                        elif len(filename) == 7:
+                            side = filename[6]
+                            if not lbl_pn in self.templates_main:
+                                self.templates_main[lbl_pn] = [lbltype, lbl_size, [" "+side,]]
+                            else:
+                                self.templates_main[lbl_pn][2].append(" "+side)
+
+    ################################################################ SCRIPT FUNCTIONS ################################################################
+    def run_script(self, script_file):
+        self.sc.test_path(script_file)
+        functions = {}
+        functions["PART_NUMBER"] = (self.script_add_part_number, ("PART_NUMBER",))
+        functions["DESCRIPTION"] = (self.script_add_description, ("DESCRIPTION",))
+        functions["ORDER_NUMBER"] = (self.script_add_order_number, ("ORDER_NUMBER",))
+        functions["DRAWING"] = (self.script_add_drawing, ("DRAWING",))
+        functions["REV"] = (self.script_add_drawing_rev, ("REV",))
+        functions["BOM"] = (self.script_add_bom_rev, ("BOM",))
+        functions["SERIAL_NUMBER_FORMAT"] = (self.script_add_sn_format, ("FORMAT",))
+        functions["BALLOON"] = (self.script_add_balloon, ("BALLOON NUMBER" , "LBL PART NUMBER"))
+        functions["LBL"] = (self.script_add_lbl, ("NAME" , "BALLOON"))
+        functions["MAIN_LBL"] = (self.script_add_main_lbl, ("BALLOON",))
+        self.sc.run_script(script_file, functions)
+    
+    def script_add_part_number(self, arguments):
+        self.info["PART_NUMBER"] = arguments[0]
+    
+    def script_add_description(self, arguments):
+        self.info["DESCRIPTION"] = arguments[0]
+
+    def script_add_sn_format(self, arguments): # format
+        self.info["SERIAL_NUMBER_FORMAT"] = arguments[0]
+    
+    def script_add_balloon(self, arguments): # balloon_number , lbl_part_number
+        self.info["balloon_"+arguments[0]] = arguments[1]
+    
+    def script_add_order_number(self, arguments): # ORDER_NUMBER
+        self.info["ORDER_NUMBER"] = arguments[0]
+
+    def script_add_drawing(self, arguments): # DRAWING
+        self.info["DRAWING"] = arguments[0]
+    
+    def script_add_drawing_rev(self, arguments): # DRAWING REV
+        self.info["DRAWING_REV"] = arguments[0]
+    
+    def script_add_bom_rev(self, arguments): # BOM
+        self.info["BOM"] = arguments[0]
+    
+    def script_add_lbl(self, arguments): # name , balloon
+        # lbl_name
+        lbl_name = arguments[0]
+
+        # balloon
+        balloon = arguments[1]
+
+        # product_part_number
+        if "PART_NUMBER" in self.info:
+            product_part_number = self.info["PART_NUMBER"]
+        else:
+            self.sc.fatal_error("Script missing function: PART_NUMBER()")
+            return
+        self.sc.test_path(self.path_main+"/"+product_part_number)
+
+        # lbl_part_number
+        if "balloon_"+balloon in self.info:
+            lbl_part_number = self.info["balloon_"+balloon]
+        else:
+            self.sc.fatal_error("No such balloon: "+balloon+" Fix script")
+            return
+        
+        # create a copy from a template
+        if lbl_part_number in self.templates:
+            src = self.templates[lbl_part_number][0] # template file location
+            lbltype = self.templates[lbl_part_number][1] # LBL, TMS, SPL
+            lbl_size = self.templates[lbl_part_number][2] # 1-2, 3-8, 1_1-2
+        else:
+            self.sc.fatal_error("There is no template file for "+lbl_part_number)
+            return
+        dst = self.path_main+"/"+product_part_number+"/"+lbltype+" "+product_part_number+" "+lbl_part_number+" "+lbl_size+" "+lbl_name+".btw"
+
+        # create a new main lbl
+        if not os.path.isfile(dst):
+            shutil.copy(src, dst)
+            self.sc.good("Created: "+dst)
+    
+    def script_add_main_lbl(self,arguments): # balloon
+        # balloon
+        balloon = arguments[0]
+
+        # product_part_number
+        if "PART_NUMBER" in self.info:
+            product_part_number = self.info["PART_NUMBER"]
+        else:
+            self.sc.fatal_error("Script missing function: PART_NUMBER()")
+            return
+        self.sc.test_path(self.path_main+"/"+product_part_number)
+        
+        # lbl_part_number
+        if "balloon_"+balloon in self.info:
+            lbl_part_number = self.info["balloon_"+balloon]
+        else:
+            self.sc.fatal_error("No such balloon: "+balloon+" Fix script")
+            return
+
+        # get template data
+        lbltype = ""
+        lbl_size = ""
+        sides = []
+        if lbl_part_number in self.templates_main:
+            lbltype = self.templates_main[lbl_part_number][0]
+            lbl_size = self.templates_main[lbl_part_number][1]
+            sides = self.templates_main[lbl_part_number][2]
+
+        # create a new main lbl
+        for side in sides:
+            # TMS TEMPLATE R-606101044 3-4 MAIN LABEL SIDE-A.btw
+            src = self.path_main_lbl_templates+"/"+lbltype+" TEMPLATE "+lbl_part_number+" "+lbl_size+" MAIN LABEL"+side+".btw"
+            self.sc.test_path(src)
+            dst = self.path_main+"/"+product_part_number+"/"+lbltype+" "+product_part_number+" "+lbl_part_number+" "+lbl_size+" MAIN LABEL"+side+".btw"
+            if not os.path.isfile(dst):
+                shutil.copy(src, dst)
+                self.sc.good("Created: "+dst)
 main()
