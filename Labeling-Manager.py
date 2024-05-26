@@ -149,6 +149,7 @@ class main:
         # make all serial numbers
         path = path_to_product+"/SerialNumbers.csv"
         file = open(path, 'w')
+        file.write("SN\n")
         for i in range(first_serial_number_int, first_serial_number_int+size):
             suffix = str(i).zfill(4)
             preffix = first_serial_number[:-4]
