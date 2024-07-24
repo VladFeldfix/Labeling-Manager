@@ -6,7 +6,7 @@ class main:
     # constructor
     def __init__(self):
         # load smart console
-        self.sc = SmartConsole("Labeling Manager", "2.0")
+        self.sc = SmartConsole("Labeling Manager", "2.1")
 
         # set-up main memu
         self.sc.add_main_menu_item("MAKE NEW LABELS", self.new)
@@ -198,6 +198,11 @@ class main:
             pn = pns[0]
             if len(pn) > len(longest_pn):
                 longest_pn = pn
+        longest_cust_pn = ""
+        for cust_pns in self.part_numbers:
+            cust_pn = cust_pns[1]
+            if len(cust_pn) > len(longest_cust_pn):
+                longest_cust_pn = cust_pn
         longest_description = ""
         for descs in self.part_numbers:
             desc = descs[2]
@@ -205,25 +210,30 @@ class main:
                 longest_description = desc
         pn_spaces = (len(longest_pn)+2)-len("PART NUMBER")
         pn_spaces = " "*pn_spaces
+        cust_pn_spaces = (len(longest_cust_pn)+2)-len("CUSTOMER PART NUMBER")
+        cust_pn_spaces = " "*cust_pn_spaces
         ds_spaces = (len(longest_description)+2)-len("DESCRIPTION")
         ds_spaces = " "*ds_spaces
-        self.sc.print("PART NUMBER"+pn_spaces+"DESCRIPTION"+ds_spaces+"QTY.",'red')
+        self.sc.print("PART NUMBER"+pn_spaces+" | CUSTOMER PART NUMBER"+cust_pn_spaces+" | DESCRIPTION"+ds_spaces+" | QTY.",'red')
         part_numbers = []
         descriptions = {}
         for pns in self.part_numbers[1:]:
             pn = pns[0]
+            cust_pn = pns[1]
             description = pns[2]
             part_numbers.append(pn)
             descriptions[pn] = description
             pn_spaces = (len(longest_pn)+2)-len(pn)
             pn_spaces = " "*pn_spaces
+            cust_pn_spaces = (len(longest_cust_pn)+2)-len(cust_pn)
+            cust_pn_spaces = " "*cust_pn_spaces
             ds_spaces = (len(longest_description)+2)-len(description)
             ds_spaces = " "*ds_spaces
             if pn in pn_qty:
                 qty = str(pn_qty[pn])
             else:
                 qty = "0"
-            self.sc.print(pn+pn_spaces+description+ds_spaces+qty)
+            self.sc.print(pn+pn_spaces+" | "+cust_pn+cust_pn_spaces+" | "+description+ds_spaces+" | "+qty)
         
         # choose an action
         action = self.sc.choose("Choose inventory action", ("ADD", "DELETE", "CANCEL"))
