@@ -6,7 +6,7 @@ class main:
     # constructor
     def __init__(self):
         # load smart console
-        self.sc = SmartConsole("Labeling Manager", "5.0")
+        self.sc = SmartConsole("Labeling Manager", "5.1")
 
         # set-up main memu
         self.sc.add_main_menu_item("MAKE NEW LABELS", self.new)
@@ -217,6 +217,7 @@ class main:
         self.sc.print("PART NUMBER"+pn_spaces+" | CUSTOMER PART NUMBER"+cust_pn_spaces+" | DESCRIPTION"+ds_spaces+" | QTY.",'red')
         part_numbers = []
         descriptions = {}
+        report = []
         for pns in self.part_numbers[1:]:
             pn = pns[0]
             cust_pn = pns[1]
@@ -234,9 +235,11 @@ class main:
             else:
                 qty = "0"
             self.sc.print(pn+pn_spaces+" | "+cust_pn+cust_pn_spaces+" | "+description+ds_spaces+" | "+qty)
+            report.append((pn,cust_pn,description,qty))
+
         
         # choose an action
-        action = self.sc.choose("Choose inventory action", ("ADD", "DELETE", "CANCEL"))
+        action = self.sc.choose("Choose inventory action", ("ADD", "DELETE", "GENERATE REPORT", "CANCEL"))
         if action == "ADD":
             # get part number
             item = self.sc.input("Insert item part number")
@@ -295,6 +298,61 @@ class main:
                 self.sc.restart()
                 return
         
+        if action == "GENERATE REPORT":
+            report.sort(key=lambda x: x[3])
+            file = open(self.path_main+"/.Database/Inventory Roport.html", 'w')
+            file.write("<html>\n")
+            file.write("\t<head>\n")
+            file.write("\t\t<style>\n")
+            file.write("\t\t\thtml{\n")
+            file.write("\t\t\t\tfont-family: Arial, Helvetica, sans-serif;\n")
+            file.write("\t\t\t}\n")
+            file.write("\t\t\ttable{\n")
+            file.write("\t\t\t\tborder-collapse: collapse;\n")
+            file.write("\t\t\t}\n")
+            file.write("\t\t\tth{\n")
+            file.write("\t\t\t\tbackground-color:#4f4f4f;\n")
+            file.write("\t\t\t\tcolor:white;\n")
+            file.write("\t\t\t}\n")
+            file.write("\t\t\tth, td{\n")
+            file.write("\t\t\t\ttext-align: left;\n")
+            file.write("\t\t\t\tpadding: 8px;\n")
+            file.write("\t\t\t}\n")
+            file.write("\t\t\ttable, tr, th, td{\n")
+            file.write("\t\t\t\tborder-color: black;\n")
+            file.write("\t\t\t\tborder: black solid 1px;\n")
+            file.write("\t\t\t}\n")
+            file.write("\t\t</style>\n")
+            file.write("\t</head>\n")
+            file.write("\t<body>\n")
+            file.write("\t\t<table>\n")
+            file.write("\t\t\t<tr>\n")
+            file.write("\t\t\t\t<th>PART NUMBER</th>\n")
+            file.write("\t\t\t\t<th>CUSTOMER PART NUMBER</th>\n")
+            file.write("\t\t\t\t<th>DESCRIPTION</th>\n")
+            file.write("\t\t\t\t<th>QTY.</th>\n")
+            file.write("\t\t\t</tr>\n")
+            for line in report:
+                color = ""
+                qty = int(line[3])
+                if qty == 0:
+                    color = " style = 'background-color:#d93b3b;'"
+                if qty == 1:
+                    color = " style = 'background-color:#dee344;'"
+                if qty > 1:
+                    color = " style = 'background-color:#72d682;'"
+                file.write("\t\t\t<tr"+color+">\n")
+                file.write("\t\t\t\t<td>"+line[0]+"</td>\n")
+                file.write("\t\t\t\t<td>"+line[1]+"</td>\n")
+                file.write("\t\t\t\t<td>"+line[2]+"</td>\n")
+                file.write("\t\t\t\t<td>"+line[3]+"</td>\n")
+                file.write("\t\t\t</tr>\n")
+            file.write("\t\t</table>\n")
+            file.write("\t</body>\n")
+            file.write("</html>\n")
+            file.close()
+            os.popen(self.path_main+"/.Database/Inventory Roport.html")
+
         if action == "CANCEL":
             # restart
             self.sc.restart()
