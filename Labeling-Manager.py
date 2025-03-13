@@ -6,7 +6,7 @@ class main:
     # constructor
     def __init__(self):
         # load smart console
-        self.sc = SmartConsole("Labeling Manager", "5.1")
+        self.sc = SmartConsole("Labeling Manager", "4.0")
 
         # set-up main memu
         self.sc.add_main_menu_item("MAKE NEW LABELS", self.new)
